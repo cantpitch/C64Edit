@@ -10,7 +10,24 @@ machine-resolution frame buffer and scaled up with nearest-neighbour sampling. T
 
 ![C128 mode](docs/c128-code.png)
 
-## Run
+## Download
+
+Each push to `main` builds self-contained packages, so no .NET install is needed. Find them under the
+workflow run's *Artifacts* on the Actions tab. Pushing a tag like `v1.0.0` publishes them as a GitHub release.
+
+| Platform | Package |
+| --- | --- |
+| Windows x64 / ARM64 | `.zip` with `C64Edit.exe` |
+| macOS Intel / Apple Silicon | `.zip` with `C64Edit.app` |
+| Linux x64 / ARM64 | `.tar.gz` with the `C64Edit` binary and a `.desktop` file |
+
+The macOS app is ad-hoc signed, not notarized. After downloading, clear the quarantine flag once:
+
+```bash
+xattr -dr com.apple.quarantine C64Edit.app
+```
+
+## Run from source
 
 ```bash
 dotnet run --project src/C64Edit -- [files...]

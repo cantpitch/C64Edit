@@ -1,0 +1,134 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  PROJECT: src/C64Edit/C64Edit.csproj
+
+jobs:
+  test:
+    name: Test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Test
+        run: dotnet test -c Release
+
+  package:
+    name: Package (${{ matrix.rid }})
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { rid: win-x64, os: ubuntu-latest }
+          - { rid: win-arm64, os: ubuntu-latest }
+          - { rid: linux-x64, os: ubuntu-latest }
+          - { rid: linux-arm64, os: ubuntu-latest }
+          # macOS bundles are packaged on macOS so they can be (ad-hoc) code signed;
+          # Apple Silicon refuses to run unsigned binaries.
+          - { rid: osx-x64, os: macos-latest }
+          - { rid: osx-arm64, os: macos-latest }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Determine version
+        id: version
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=0.0.0-ci.${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish
+        shell: bash
+        run: |
+          single_file=true
+          [[ "${{ matrix.rid }}" == osx-* ]] && single_file=false   # an .app bundle holds the files itself
+          dotnet publish "$PROJECT" -c Release -r ${{ matrix.rid }} --self-contained true \
+            -p:Version=${{ steps.version.outputs.version }} \
+            -p:PublishSingleFile=$single_file \
+            -p:IncludeNativeLibrariesForSelfExtract=true \
+            -p:EnableCompressionInSingleFile=$single_file \
+            -p:DebugType=none \
+            -o publish
+          rm -f publish/*.pdb   # native debug symbols shipped by SkiaSharp/HarfBuzzSharp
+
+      - name: Package Windows
+        if: startsWith(matrix.rid, 'win-')
+        shell: bash
+        run: |
+          mkdir -p dist/C64Edit
+          cp publish/* dist/C64Edit/
+          cp README.md dist/C64Edit/
+          (cd dist && zip -qr "C64Edit-${{ steps.version.outputs.version }}-${{ matrix.rid }}.zip" C64Edit)
+
+      - name: Package Linux
+        if: startsWith(matrix.rid, 'linux-')
+        shell: bash
+        run: |
+          mkdir -p dist/C64Edit
+          cp publish/* dist/C64Edit/
+          cp README.md packaging/linux/c64edit.desktop dist/C64Edit/
+          chmod +x dist/C64Edit/C64Edit
+          tar -czf "dist/C64Edit-${{ steps.version.outputs.version }}-${{ matrix.rid }}.tar.gz" -C dist C64Edit
+
+      - name: Package macOS
+        if: startsWith(matrix.rid, 'osx-')
+        shell: bash
+        run: |
+          app=dist/C64Edit.app
+          mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
+          cp -R publish/. "$app/Contents/MacOS/"
+          sed "s/__VERSION__/${{ steps.version.outputs.version }}/g" packaging/macos/Info.plist > "$app/Contents/Info.plist"
+          chmod +x "$app/Contents/MacOS/C64Edit"
+          codesign --force --deep --sign - "$app"
+          ditto -c -k --keepParent "$app" "dist/C64Edit-${{ steps.version.outputs.version }}-${{ matrix.rid }}.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: C64Edit-${{ matrix.rid }}
+          path: |
+            dist/*.zip
+            dist/*.tar.gz
+          if-no-files-found: error
+
+  release:
+    name: Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" --title "C64Edit $GITHUB_REF_NAME" --generate-notes

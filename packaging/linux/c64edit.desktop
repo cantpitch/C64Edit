@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=C64Edit
+Comment=A text editor wearing a Commodore 64 costume
+Exec=C64Edit %F
+Terminal=false
+Categories=Utility;TextEditor;Development;
+MimeType=text/plain;

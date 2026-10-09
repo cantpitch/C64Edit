@@ -89,9 +89,11 @@ public class ScreenTests
     [AvaloniaFact]
     public async Task MissingFileFromMenuShowsError()
     {
-        var (_, screen) = await Run("snap $SNAP/12-tabs-marquee.png", null, "/tmp/a.txt", "/tmp/b-with-a-long-name.txt", "/tmp/c.cs");
+        var tmp = Path.GetTempPath();
+        var (_, screen) = await Run("snap $SNAP/12-tabs-marquee.png", null,
+            Path.Combine(tmp, "a.txt"), Path.Combine(tmp, "b-with-a-long-name.txt"), Path.Combine(tmp, "c.cs"));
         Assert.Equal(3, screen.Tabs.Count);
-        screen.OpenPath("/does/not/exist.txt");
+        screen.OpenPath(Path.Combine(tmp, "does-not-exist", "nope.txt"));
         Assert.Equal(3, screen.Tabs.Count);
     }
 
