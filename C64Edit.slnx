@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/C64Edit/C64Edit.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/C64Edit.Tests/C64Edit.Tests.csproj" />
+  </Folder>
+</Solution>
