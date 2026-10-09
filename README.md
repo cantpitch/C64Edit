@@ -6,6 +6,10 @@ built with C# and Avalonia 12.
 Everything you see (border, text, tabs, menus, dialogs) is drawn as 8x8 character cells into a
 machine-resolution frame buffer and scaled up with nearest-neighbour sampling. That keeps it pixel-sharp.
 
+![C64 mode](docs/c64-code.png) ![Menu](docs/c64-menu.png)
+
+![C128 mode](docs/c128-code.png)
+
 ## Run
 
 ```bash
