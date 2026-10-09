@@ -46,11 +46,12 @@ public sealed class Settings
         return scheme;
     }
 
-    private static string FilePath => Path.Combine(
+    public static string Directory =>
         Environment.GetEnvironmentVariable("C64EDIT_SETTINGS_DIR") is { Length: > 0 } dir
             ? dir
-            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "C64Edit"),
-        "settings.json");
+            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "C64Edit");
+
+    private static string FilePath => Path.Combine(Directory, "settings.json");
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -84,7 +85,7 @@ public sealed class Settings
     {
         try
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
+            System.IO.Directory.CreateDirectory(Directory);
             File.WriteAllText(FilePath, JsonSerializer.Serialize(this, JsonOptions));
         }
         catch

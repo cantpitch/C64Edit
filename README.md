@@ -37,8 +37,9 @@ Requires the .NET 10 SDK. Paths that don't exist yet open as new files that save
   For pixel-exact Commodore glyphs, use *File → Load Char ROM...* with a `chargen` ROM image you own
   (for example from a VICE installation). Characters a ROM lacks fall back to the built-in font.
 
-Settings are saved to `settings.json` in the user's application-data folder (`~/.config/C64Edit` on macOS/Linux,
-`%APPDATA%\C64Edit` on Windows).
+Settings are saved to `settings.json` in the user's application-data folder: `~/Library/Application Support/C64Edit`
+on macOS, `~/.config/C64Edit` on Linux, `%APPDATA%\C64Edit` on Windows. Unhandled errors are written to `crash.log`
+in the same folder (and to the terminal).
 
 ## Tests
 
